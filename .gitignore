@@ -1,0 +1,47 @@
+# Python artifacts
+**pycache**/
+\*.py\[cod]
+\*\$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Package distribution
+build/
+dist/
+\*.egg-info/
+
+# IDE/editor settings
+.vscode/
+.idea/
+\*.sublime-project
+\*.sublime-workspace
+
+# MacOS
+.DS\_Store
+
+# Logs and databases
+\*.log
+\*.sqlite3
+
+# ChromaDB persistence directory
+chroma\_db/
+
+# FAISS index file (if ever used)
+vector\_index.faiss
+
+# Environment variables file
+.env
+
+# Gradio cache
+.cache/
+
+# Ollama models (if stored locally)
+ollama\_models/
+
+# Ignore all PDFs in data/
+data/*
+!data/.gitkeep
