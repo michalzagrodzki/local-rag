@@ -1,7 +1,7 @@
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
 from .config import PDF_DIR, CHUNK_SIZE, CHUNK_OVERLAP, EMBEDDING_MODEL, VECTOR_STORE, CHROMA_DB_DIR
 
 def load_and_split() -> list:

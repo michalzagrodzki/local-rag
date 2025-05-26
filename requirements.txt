@@ -1,8 +1,10 @@
 langchain
 langchain_community
+langchain_huggingface
+langchain-chroma
+langchain-ollama
 pypdf
 chromadb
 sentence-transformers
-langchain-ollama
 ChatOllama
 gradio

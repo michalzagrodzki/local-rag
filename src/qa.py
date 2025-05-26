@@ -1,8 +1,8 @@
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import Chroma
-from langchain_community.chat_models import ChatOllama
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_chroma import Chroma
+from langchain_ollama import ChatOllama
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+from langchain_core.output_parsers import StrOutputParser
 from .config import (CHROMA_DB_DIR, EMBEDDING_MODEL, OLLAMA_MODEL, OLLAMA_API_URL)
 
 
@@ -24,28 +24,25 @@ def retrieve_context(db: Chroma, question: str, k: int = 3) -> tuple[str, list]:
     return context, docs
 
 
-def make_chain() -> LLMChain:
-    """Construct an LLMChain with the retrieval prompt template."""
-    template = (
-        "Use ONLY the context below to answer the question.\n\n"
-        "Context:\n{context}\n\n"
-        "Question:\n{question}\n\n"
-        "Answer:"
-    )
-    prompt = PromptTemplate(
-        input_variables=["context", "question"],
-        template=template
-    )
-    llm = ChatOllama(
-        model=OLLAMA_MODEL,
-        ollama_api_url=OLLAMA_API_URL
-    )
-    chain = LLMChain(llm=llm, prompt=prompt)
-    return chain
+template = (
+    "Use ONLY the context below to answer the question.\n\n"
+    "Context:\n{context}\n\n"
+    "Question:\n{question}\n\n"
+    "Answer:"
+)
+prompt = PromptTemplate(
+    input_variables=["context", "question"],
+    template=template
+)
+llm = ChatOllama(
+    model=OLLAMA_MODEL,
+    ollama_api_url=OLLAMA_API_URL
+)
+runnable = prompt | llm | StrOutputParser()
 
 
-def answer_question(db: Chroma, chain: LLMChain, question: str, k: int = 3) -> tuple[str, list]:
+def answer_question(db: Chroma, question: str, k: int = 3) -> tuple[str, list]:
     """Retrieve context, run the chain, and return the answer plus source docs."""
     context, docs = retrieve_context(db, question, k)
-    response = chain.run({"context": context, "question": question})
+    response = runnable.invoke({"context": context, "question": question})
     return response, docs
