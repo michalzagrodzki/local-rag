@@ -15,9 +15,12 @@ def chat_stream(user_message, chat_history):
       c) then stream it back word by word.
     """
     # ensure there's a list
-    messages = chat_history or []
+    def sanitize(text: str) -> str:
+        return text.replace("{", "{{").replace("}", "}}")
+    clean_user = sanitize(user_message)
 
-    messages = messages + [{"role": "user", "content": user_message}]
+    messages = chat_history or []
+    messages = messages + [{"role": "user", "content": clean_user}]
 
     # a) get the raw answer (with full pipeline + history)
     tuple_history = [(m["content"], "") for m in messages if m["role"]=="user"]  # keep only user turns
@@ -45,10 +48,16 @@ def chat_stream(user_message, chat_history):
         print(" -", doc.metadata.get("source", "unknown"))
 
 def main():
-    with gr.Blocks() as demo:
+    css = """
+    #chatbot {
+        overflow-y: auto !important;
+        min-height: 70vh;
+    }
+    """
+    with gr.Blocks(css = css) as demo:
         gr.Markdown("## 📚 PDF Chatbot (Local RAG)\nStreaming + follow-ups supported.")
         # Use messages format to avoid deprecation warning
-        chatbot = gr.Chatbot(type="messages", elem_id="chatbot")
+        chatbot = gr.Chatbot(type="messages", elem_id="chatbot", elem_classes="chatbot")
         user_input = gr.Textbox(placeholder="Type your question…", show_label=False)
 
         user_input.submit(
