@@ -1,49 +1,63 @@
-import threading
-import itertools
 import time
-import sys
+import gradio as gr
 import re
-from src.ingest import build_or_load_index
-from src.qa import load_index, answer_with_history
 
-def spinner(done_event):
-    """Simple CLI spinner until done_event is set."""
-    for c in itertools.cycle('|/-\\'):
-        if done_event.is_set():
-            break
-        sys.stdout.write(f"\rThinking {c}")
-        sys.stdout.flush()
-        time.sleep(0.1)
-    sys.stdout.write("\r" + " " * 20 + "\r")
+from src.ingest import build_or_load_index
+from src.qa import answer_with_history
+db = build_or_load_index()
+
+def chat_stream(user_message, chat_history):
+    """
+    Gradio will call this generator to update the chat.
+    We:
+      a) run RAG+LLM once to get the full answer,
+      b) strip out any <think>...</think> sections,
+      c) then stream it back word by word.
+    """
+    # ensure there's a list
+    messages = chat_history or []
+
+    messages = messages + [{"role": "user", "content": user_message}]
+
+    # a) get the raw answer (with full pipeline + history)
+    tuple_history = [(m["content"], "") for m in messages if m["role"]=="user"]  # keep only user turns
+    raw_answer, new_history, sources = answer_with_history(db, user_message, tuple_history, k=5)
+
+    # b) remove any <think>…</think> chains of thought
+    clean_answer = re.sub(
+        r'<think>.*?</think>',
+        '',
+        raw_answer,
+        flags=re.DOTALL
+    ).strip()
+
+    # c) stream word-by-word
+    words = clean_answer.split()
+    partial = ""
+    for w in words:
+        partial += w + " "
+        yield messages + [{"role": "assistant", "content": partial.strip()}]
+        time.sleep(0.05)
+
+    # finally, show sources in console or log (optional)
+    print("Sources for this turn:")
+    for doc in sources:
+        print(" -", doc.metadata.get("source", "unknown"))
 
 def main():
-    db = build_or_load_index()
+    with gr.Blocks() as demo:
+        gr.Markdown("## 📚 PDF Chatbot (Local RAG)\nStreaming + follow-ups supported.")
+        # Use messages format to avoid deprecation warning
+        chatbot = gr.Chatbot(type="messages", elem_id="chatbot")
+        user_input = gr.Textbox(placeholder="Type your question…", show_label=False)
 
-    print("\n🗨️  Retrieval-Augmented Generation ready. Ask anything!\n")
-    chat_history = []
-    while True:
-        q = input("Your question (or ‘exit’): ").strip()
-        if q.lower() in ("exit", "quit"):
-            print("👋 Bye!")
-            break
-        
-        done_event = threading.Event()
-        spin_thread = threading.Thread(target=spinner, args=(done_event,))
-        spin_thread.start()
+        user_input.submit(
+            fn=chat_stream,
+            inputs=[user_input, chatbot],
+            outputs=chatbot
+        )
 
-        raw_answer, chat_history, sources = answer_with_history(db, q, chat_history, k=5)
-
-        done_event.set()
-        spin_thread.join()
-
-        answer = re.sub(r'<think>.*?</think>', '', raw_answer, flags=re.DOTALL).strip()
-        
-        print("\n🤖 Answer:\n", answer, "\n")
-        print("📑 Sources used:")
-        for i, doc in enumerate(sources, 1):
-            snippet = doc.page_content.replace("\n", " ")[:200]
-            print(f"  {i}. (…){snippet}…")
-        print("\n" + "-"*40 + "\n")
+    demo.launch()
 
 if __name__ == "__main__":
     main()
