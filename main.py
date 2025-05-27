@@ -4,7 +4,7 @@ import time
 import sys
 import re
 from src.ingest import build_or_load_index
-from src.qa import answer_question
+from src.qa import load_index, answer_with_history
 
 def spinner(done_event):
     """Simple CLI spinner until done_event is set."""
@@ -20,6 +20,7 @@ def main():
     db = build_or_load_index()
 
     print("\n🗨️  Retrieval-Augmented Generation ready. Ask anything!\n")
+    chat_history = []
     while True:
         q = input("Your question (or ‘exit’): ").strip()
         if q.lower() in ("exit", "quit"):
@@ -30,7 +31,7 @@ def main():
         spin_thread = threading.Thread(target=spinner, args=(done_event,))
         spin_thread.start()
 
-        raw_answer, sources = answer_question(db, q, k=5)
+        raw_answer, chat_history, sources = answer_with_history(db, q, chat_history, k=5)
 
         done_event.set()
         spin_thread.join()
