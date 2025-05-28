@@ -24,7 +24,7 @@ def chat_stream(user_message, chat_history):
 
     # a) get the raw answer (with full pipeline + history)
     tuple_history = [(m["content"], "") for m in messages if m["role"]=="user"]  # keep only user turns
-    raw_answer, new_history, sources = answer_with_history(db, user_message, tuple_history, k=5)
+    raw_answer, new_history, sources = answer_with_history(db, user_message, tuple_history)
 
     # b) remove any <think>…</think> chains of thought
     clean_answer = re.sub(

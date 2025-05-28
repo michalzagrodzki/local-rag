@@ -2,7 +2,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-from .config import PDF_DIR, CHUNK_SIZE, CHUNK_OVERLAP, EMBEDDING_MODEL, VECTOR_STORE, CHROMA_DB_DIR
+from .config import PDF_DIR, CHUNK_SIZE, CHUNK_OVERLAP, EMBEDDING_MODEL, CHROMA_DB_DIR, DEBUG
 
 def load_and_split() -> list:
     splitter = CharacterTextSplitter(
@@ -14,7 +14,10 @@ def load_and_split() -> list:
     for pdf in PDF_DIR.glob("*.pdf"):
         loader = PyPDFLoader(str(pdf))
         pages = loader.load_and_split()
-        docs.extend(splitter.split_documents(pages))
+        chunks = splitter.split_documents(pages)
+        if DEBUG:
+            print(f"[DEBUG] {pdf.name}: split into {len(chunks)} chunks.")
+        docs.extend(chunks)
     return docs
 
 def build_index(docs):
