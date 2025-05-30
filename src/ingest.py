@@ -4,6 +4,17 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from .config import PDF_DIR, CHUNK_SIZE, CHUNK_OVERLAP, EMBEDDING_MODEL, CHROMA_DB_DIR, DEBUG
 
+HNSW_CONFIG = {
+    "hnsw:space": "cosine",         # use cosine distance
+    "hnsw:construction_ef": 100,    # neighbors to explore during construction
+    "hnsw:M": 16,                   # maximum neighbor connections
+    "hnsw:search_ef": 10,           # neighbors to explore during search
+    "hnsw:num_threads": 4,          # threads for HNSW operations
+    "hnsw:resize_factor": 1.2,      # growth factor when resizing
+    "hnsw:batch_size": 100,         # brute-force batch size fallback threshold
+    "hnsw:sync_threshold": 1000,    # threshold to write HNSW index to disk
+}
+
 def load_and_split() -> list:
     splitter = CharacterTextSplitter(
         separator="\n",
@@ -26,6 +37,7 @@ def build_index(docs):
         docs,
         embedder,
         persist_directory=str(CHROMA_DB_DIR),
+        collection_metadata=HNSW_CONFIG,
     )
     index.persist()
     return index
@@ -40,7 +52,8 @@ def build_or_load_index():
         embedder = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
         index = Chroma(
             persist_directory=str(CHROMA_DB_DIR),
-            embedding_function=embedder
+            embedding_function=embedder,
+            collection_metadata=HNSW_CONFIG,
         )
         # Quick test to see if it has any vectors
         if not index._collection.count():
